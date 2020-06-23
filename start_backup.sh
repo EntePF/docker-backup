@@ -1,156 +1,113 @@
 #!/bin/bash
 
-## Setup
-
-# if selfreferenced is true hard links will point to source, otherwise to latest previous backup
-CONFIG='[
-{
-	backupprefix="Server Backup ";
-	source="/home/patrick/rsync/files-to-backup/";
-	targetroot="/home/patrick/rsync/backup-destination/";
-	logroot="/home/patrick/rsync/backup-logs/";
-	selfreferenced=true;
-	deletebackupsolderthan="- 6 months";
-},
-{
-	backupprefix="Other Backup ";
-	source="/home/patrick/rsync/files-to-backup/";
-	targetroot="/home/patrick/rsync/backup-destination/";
-	logroot="/home/patrick/rsync/backup-logs/";
-	selfreferenced=true;
-	deletebackupsolderthan="- 6 months";
-}
-]';
-
-echo "$CONFIG" | grep -Pzo "(?s)\{.*?\}";
-echo;
-
-BACKUPPREFIX="Server Backup ";
-
-SOURCE="/home/patrick/rsync/files-to-backup/";
-
-TARGETROOT="/home/patrick/rsync/backup-destination/";
-
-LOGDESTINATION="/home/patrick/rsync/backup-logs/";
-
-# if true hard links will point to $SOURCE, otherwise to latest previous backup
-SELFREFERENCED=true;
-
-DELETEBACKUPSOLDERTHAN="- 6 months";
-
-## Functions
-
 function log() { local message="$1"; local currentlog="$2";
-echo "$message" | tee -a "$currentlog";
+	echo "$message" | tee -a "$currentlog";
 }
 
 function getDateTimeNow() { local result=$1;
-eval $result="'$(date +"%F %R:%S")'";
+	eval $result="'$(date +"%F %R:%S")'";
 }
 
 function dateToDateForFolder() { local input="$1"; local result=$2;
-eval $result="'$(date --date "$input" +"%F_%H-%M-%S")'";
+	eval $result="'$(date --date "$input" +"%F_%H-%M-%S")'";
 }
 
 function addTime() { local date="$1"; local add="$2"; local result=$3;
-local onlydate=$(date --date "$date" +"%F");
-local onlyhours=$(date --date "$date" +"%H");
-local onlyminutes=$(date --date "$date" +"%M");
-local onlyseconds=$(date --date "$date" +"%S");
+	local onlydate=$(date --date "$date" +"%F");
+	local onlyhours=$(date --date "$date" +"%H");
+	local onlyminutes=$(date --date "$date" +"%M");
+	local onlyseconds=$(date --date "$date" +"%S");
 
-eval $result="'$(date --date "$onlydate + $onlyhours hours + $onlyminutes minutes + $onlyseconds seconds $add" +"%F %R:%S")'";
+	eval $result="'$(date --date "$onlydate + $onlyhours hours + $onlyminutes minutes + $onlyseconds seconds $add" +"%F %R:%S")'";
 }
 
 function findLastestBackup() { local currentlog="$1"; local selfreferenced="$2"; local targetroot="$3"; local source="$4"; local backupprefix="$5"; local result=$6;
-if [ "$selfreferenced" == true ]
-then
-	log "Backup will be self-referenced." "$currentlog";
-	eval $result="'$source'";
-else
-	local latestbackup=$(ls -F "$targetroot" | grep "$backupprefix.*/" | sort -r | head -1);
-	if [ -z "$latestbackup" ]
+	if [ "$selfreferenced" == true ]
 	then
-		log "No previous backup found." "$currentlog";
-		eval result="''";
+		log "Backup will be self-referenced." "$currentlog";
+		eval $result="'$source'";
 	else
-		log "Found previous backup \"$result\"." "$currentlog";
-		eval result="'$targetroot$latestbackup'";
+		local latestbackup=$(ls -F "$targetroot" | grep "$backupprefix.*/" | sort -r | head -1);
+		if [ -z "$latestbackup" ]
+		then
+			log "No previous backup found." "$currentlog";
+		else
+			log "Found previous backup \"$targetroot$latestbackup\"." "$currentlog";
+			eval $result="'$targetroot$latestbackup'";
+		fi
 	fi
-fi
 }
 
 function backup() { local currentlog="$1"; local source="$2"; local targetroot="$3"; local backupprefix="$4"; local latestbackuptarget="$5"; local runningsuffix="$6"; local result=$7; local result2=$8;
-log "" "$currentlog";
-log "Starting backup for \"$source\" ..." "$currentlog";
-log "" "$currentlog";
+	log "" "$currentlog";
+	log "Starting backup for \"$source\" ..." "$currentlog";
+	log "" "$currentlog";
 
-local currenttarget="$targetroot$backupprefix$runningsuffix";
+	local currenttarget="$targetroot$backupprefix$runningsuffix";
 
-log "'$(rsync --delete --stats -PSvahHAXx \
-	"$source" \
-	--link-dest="$latestbackuptarget" \
-	"$currenttarget")'" "$currentlog";
+	log "'$(rsync --delete --stats -PSvahHAXx \
+		"$source" \
+		--link-dest="$latestbackuptarget" \
+		"$currenttarget")'" "$currentlog";
 
-getDateTimeNow datefinished;
-dateToDateForFolder "$datefinished" datefinishedformatted;
+	getDateTimeNow datefinished;
+	dateToDateForFolder "$datefinished" datefinishedformatted;
 
-local finishedbackupfolder="$targetroot$backupprefix$datefinishedformatted";
-mv "$currenttarget" "$finishedbackupfolder";
-log "" "$currentlog";
-log "Stored finished backup in \"$finishedbackupfolder\"." "$currentlog";
+	local finishedbackupfolder="$targetroot$backupprefix$datefinishedformatted";
+	mv "$currenttarget" "$finishedbackupfolder";
+	log "" "$currentlog";
+	log "Stored finished backup in \"$finishedbackupfolder\"." "$currentlog";
 
-eval $result="'$datefinished'";
-eval $result2="'$datefinishedformatted'";
+	eval $result="'$datefinished'";
+	eval $result2="'$datefinishedformatted'";
 }
 
 function deleteoldbackups() { local currentlog="$1"; local datefinished="$2"; local targetroot="$3"; local backupprefix="$4"; local deletebackupsolderthan="$5";
-addTime "$datefinished" "$deletebackupsolderthan" datetodelete;
+	addTime "$datefinished" "$deletebackupsolderthan" datetodelete;
 
-if [[ "$datetodelete" < "$datefinished" ]]
-then
-	dateToDateForFolder "$datetodelete" datetodeleteformatted;
+	if [[ "$datetodelete" < "$datefinished" ]]
+	then
+		dateToDateForFolder "$datetodelete" datetodeleteformatted;
 
-	log "" "$currentlog";
-	log "Deleting backups older than \"$datetodelete\" ..." "$currentlog";
+		log "" "$currentlog";
+		log "Deleting backups older than \"$datetodelete\" ..." "$currentlog";
 
-	ls "$targetroot" | grep "$backupprefix.*" | while read line; do if [[ "$line" < "$backupprefix$datetodeleteformatted" ]]; then
-		rm -r "$targetroot$line";
-		log "Deleted \"$targetroot$line\"." "$currentlog";
-	fi; done;
+		ls "$targetroot" | grep "$backupprefix.*" | while read line; do if [[ "$line" < "$backupprefix$datetodeleteformatted" ]]; then
+			rm -r "$targetroot$line";
+			log "Deleted \"$targetroot$line\"." "$currentlog";
+		fi; done;
 
-	log "" "$currentlog";
-	log "Deletion of older backups finished." "$currentlog";
-else
-	log "" "$currentlog";
-	log "Did not delete old backups, because \"$datetodelete\" is not earlier than \"$datefinished\". Change \"\$deletebackupsolderthan\" to delete old backups." "$currentlog";
-fi;
+		log "" "$currentlog";
+		log "Deletion of older backups finished." "$currentlog";
+	else
+		log "" "$currentlog";
+		log "Did not delete old backups, because \"$datetodelete\" is not earlier than \"$datefinished\". Change \"\$deletebackupsolderthan\" to delete old backups." "$currentlog";
+	fi;
 }
 
 function startBackup() { local logdestination="$1"; local backupprefix="$2"; local selfreferenced="$3"; local targetroot="$4"; local source="$5"; local deletebackupsolderthan="$6";
-local logsuffix=".log";
-local runningsuffix="_running";
-local currentlog="$logdestination$backupprefix$runningsuffix$logsuffix";
+	local logsuffix=".log";
+	local runningsuffix="running";
+	local currentlog="$logdestination$backupprefix$runningsuffix$logsuffix";
 
-getDateTimeNow datestarted;
-log "Started backup at \"$datestarted\"." "$currentlog";
-log "" "$currentlog";
+	getDateTimeNow datestarted;
+	log "Started backup at \"$datestarted\"." "$currentlog";
+	log "" "$currentlog";
 
-findLastestBackup "$currentlog" "$selfreferenced" "$targetroot" "$source" "$backupprefix" latestbackuptarget;
+	findLastestBackup "$currentlog" "$selfreferenced" "$targetroot" "$source" "$backupprefix" latestbackuptarget;
 
-backup "$currentlog" "$source" "$targetroot" "$backupprefix" "$latestbackuptarget" "$runningsuffix" datefinished datefinishedformatted;
+	backup "$currentlog" "$source" "$targetroot" "$backupprefix" "$latestbackuptarget" "$runningsuffix" datefinished datefinishedformatted;
 
-deleteoldbackups "$currentlog" "$datefinished" "$targetroot" "$backupprefix" "$deletebackupsolderthan";
+	deleteoldbackups "$currentlog" "$datefinished" "$targetroot" "$backupprefix" "$deletebackupsolderthan";
 
-local finishedlogfile="$logdestination$backupprefix$datefinishedformatted$logsuffix";
-mv "$currentlog" "$finishedlogfile";
-currentlog="$finishedlogfile";
-log "" "$currentlog";
-log "Stored finished log in \"$finishedlogfile\"." "$currentlog";
+	local finishedlogfile="$logdestination$backupprefix$datefinishedformatted$logsuffix";
+	mv "$currentlog" "$finishedlogfile";
+	currentlog="$finishedlogfile";
+	log "" "$currentlog";
+	log "Stored finished log in \"$finishedlogfile\"." "$currentlog";
 
-getDateTimeNow finaltime;
-log "" "$currentlog";
-log "Backup process completed at \"$finaltime\"." "$currentlog";
+	getDateTimeNow finaltime;
+	log "" "$currentlog";
+	log "Backup process completed at \"$finaltime\"." "$currentlog";
 }
-
-startBackup "$LOGDESTINATION" "$BACKUPPREFIX" "$SELFREFERENCED" "$TARGETROOT" "$SOURCE" "$DELETEBACKUPSOLDERTHAN";
 
