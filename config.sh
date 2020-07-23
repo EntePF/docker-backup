@@ -1,5 +1,5 @@
 #!/bin/bash
-. .src/lib.sh
+. ./src/lib.sh
 
 # if true hard links will point to $SOURCE, otherwise to latest previous backup
 startBackup "/srv/docker-backup/logs/" \
