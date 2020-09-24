@@ -1,4 +1,4 @@
-# How to configure my backups
+# How to configure backups
 
 Look at *config.sh* to see an example of how to setup your backup.
 
