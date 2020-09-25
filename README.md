@@ -2,7 +2,7 @@
 
 Look at *config.sh* to see an example of how to setup your backup.
 
-By calling *configure_daily_job.sh* linux will run *congig.sh* once a day (at 4 AM or later).
+By calling *configure_daily_job.sh* linux will run *config.sh* once a day (at 4 AM or later).
 
 # Project architecture
 
