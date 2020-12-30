@@ -33,3 +33,10 @@ startBackup "/media/patrick/PF_4TB/backup/logs/" \
 	"/srv/resilio-sync/" \
 	"- 6 months";
 
+echo;
+startBackup "/media/patrick/PF_3TB/georg_resilio_backup/logs/" \
+	"Georg_Resilio_Backup" \
+	true \
+	"/media/patrick/PF_3TB/georg_resilio_backup/" \
+	"/media/patrick/PF_3TB/georg_resilio/" \
+	"- 6 months";
